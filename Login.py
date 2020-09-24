@@ -120,7 +120,7 @@ class Woocommerce:
 #
 
 class EZ_Web_Automation:
-    def _init_(self):
+    def __init__(self):
         self.username = USERNAME
         self.password = PASSWORD
         self.chrome_options = webdriver.ChromeOptions()
