@@ -118,18 +118,19 @@ class Woocommerce:
 
         return self.wcapi.put(f"orders/{order_id}", data).json()
 #
+
 class EZ_Web_Automation:
-    class EZ_Web_Automation:
-        def _init_(self):
-            self.username = USERNAME
-            self.password = PASSWORD
-            self.chrome_options = webdriver.ChromeOptions()
-            self.chrome_options.add_argument('--headless')
-            self.chrome_options.add_argument('--no-sandbox')
-            self.url = 'https://cloud.ezlynk.com/'
-            self.tech_account = 'https://cloud.ezlynk.com/wp/customers?sortBy=name&sortDir=asc'
-            self.vin_click = 'https://cloud.ezlynk.com/wp/autosharing/queue?sortBy=value&sortDir=asc&vin=true'
-            self.driver = webdriver.Chrome("/home/ubuntu/ezlynkapi/EZ-EFI-Order_Script_Automation/chromedriver", chrome_options=self.chrome_options, service_args=['--verbose', '--log-path=/tmp/chromedriver.log'])
+    def _init_(self):
+        self.username = USERNAME
+        self.password = PASSWORD
+        self.chrome_options = webdriver.ChromeOptions()
+        self.chrome_options.add_argument('--headless')
+        self.chrome_options.add_argument('--no-sandbox')
+        self.url = 'https://cloud.ezlynk.com/'
+        self.tech_account = 'https://cloud.ezlynk.com/wp/customers?sortBy=name&sortDir=asc'
+        self.vin_click = 'https://cloud.ezlynk.com/wp/autosharing/queue?sortBy=value&sortDir=asc&vin=true'
+        self.driver = webdriver.Chrome("/home/ubuntu/ezlynkapi/EZ-EFI-Order_Script_Automation/chromedriver", chrome_options=self.chrome_options, service_args=['--verbose', '--log-path=/tmp/chromedriver.log'])
+    
     def ez_web_access(self):
         self.driver.get(self.url)
         self.driver.find_element_by_id('Email').send_keys(self.username)
