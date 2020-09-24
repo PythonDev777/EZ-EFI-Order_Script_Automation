@@ -33,7 +33,6 @@ class Woocommerce:
 
     def get_complete_orders_data(self, params):
         complete_orders = self.wcapi.get('orders', params=params).json()
-        print(complete_orders)
         self.process_orders(complete_orders)
         return complete_orders
 
@@ -49,7 +48,6 @@ class Woocommerce:
                     ez_info = ez_data['value']
                     ez_order_details.append(ez_info)
                     ezlynk_order = ez_order_details
-                print(ez_order_details)
                 self.fullfill_ezlynk_order(ezlynk_order)
             elif meta == 'Ez-Lynk Wholesale':
                 ez_order = info['line_items'][0]['meta_data']
@@ -58,7 +56,6 @@ class Woocommerce:
                     ez_info = ez_data['value']
                     ez_order_details.append(ez_info)
                     ezlynk_order = ez_order_details
-                print(ez_order_details)
                 self.fullfill_ezlynk_wholesale_order(ezlynk_order)
             elif meta == 'EFI Tune Order':
                 efi_order = info['line_items'][0]['meta_data']
@@ -135,7 +132,6 @@ class EZ_Web_Automation:
             self.driver = webdriver.Chrome("/home/ubuntu/ezlynkapi/EZ-EFI-Order_Script_Automation/chromedriver", chrome_options=self.chrome_options, service_args=['--verbose', '--log-path=/tmp/chromedriver.log'])
     def ez_web_access(self):
         self.driver.get(self.url)
-        print('hello')
         self.driver.find_element_by_id('Email').send_keys(self.username)
         self.driver.find_element_by_id('Password').send_keys(self.password)
         self.driver.find_element_by_id('Password').send_keys(Keys.ENTER)
