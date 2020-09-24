@@ -33,6 +33,7 @@ class Woocommerce:
 
     def get_complete_orders_data(self, params):
         complete_orders = self.wcapi.get('orders', params=params).json()
+        print(complete_orders)
         self.process_orders(complete_orders)
         return complete_orders
 
@@ -50,6 +51,15 @@ class Woocommerce:
                     ezlynk_order = ez_order_details
                 print(ez_order_details)
                 self.fullfill_ezlynk_order(ezlynk_order)
+            elif meta == 'Ez-Lynk Wholesale':
+                ez_order = info['line_items'][0]['meta_data']
+                ez_order_details = []
+                for ez_data in ez_order:
+                    ez_info = ez_data['value']
+                    ez_order_details.append(ez_info)
+                    ezlynk_order = ez_order_details
+                print(ez_order_details)
+                self.fullfill_ezlynk_wholesale_order(ezlynk_order)
             elif meta == 'EFI Tune Order':
                 efi_order = info['line_items'][0]['meta_data']
                 efi_order_details = []
@@ -64,7 +74,18 @@ class Woocommerce:
     def fullfill_ezlynk_order(self, ez_order_details):
         vehicle_type = ez_order_details[2]
         lynk_time = ez_order_details[3]
-        vin_number = ez_order_details [4]
+        vin_number = ez_order_details[4]
+        self.automation.ez_web_access()
+        self.automation.ez_auto_lynk()
+        self.automation.ez_vehicle_fuel_type()
+        self.automation.lynk_type(lynk_time)
+        self.automation.enter_vin_number(vin_number)
+        self.automation.select_rating_for_profile(lynk_time)
+
+    def fullfill_ezlynk_wholesale_order(self, ez_order_details):
+        vehicle_type = ez_order_details[2]
+        lynk_time = ez_order_details[1]
+        vin_number = ez_order_details[2]
         self.automation.ez_web_access()
         self.automation.ez_auto_lynk()
         self.automation.ez_vehicle_fuel_type()
@@ -101,16 +122,20 @@ class Woocommerce:
         return self.wcapi.put(f"orders/{order_id}", data).json()
 #
 class EZ_Web_Automation:
-    def __init__(self):
-        self.username = USERNAME
-        self.password = PASSWORD
-        self.url = 'https://cloud.ezlynk.com/'
-        self.tech_account = 'https://cloud.ezlynk.com/wp/customers?sortBy=name&sortDir=asc'
-        self.vin_click = 'https://cloud.ezlynk.com/wp/autosharing/queue?sortBy=value&sortDir=asc&vin=true'
-        self.driver = webdriver.Chrome("/Users/ryan/Downloads/chromedriver")
-
+    class EZ_Web_Automation:
+        def _init_(self):
+            self.username = USERNAME
+            self.password = PASSWORD
+            self.chrome_options = webdriver.ChromeOptions()
+            self.chrome_options.add_argument('--headless')
+            self.chrome_options.add_argument('--no-sandbox')
+            self.url = 'https://cloud.ezlynk.com/'
+            self.tech_account = 'https://cloud.ezlynk.com/wp/customers?sortBy=name&sortDir=asc'
+            self.vin_click = 'https://cloud.ezlynk.com/wp/autosharing/queue?sortBy=value&sortDir=asc&vin=true'
+            self.driver = webdriver.Chrome("/home/ubuntu/ezlynkapi/EZ-EFI-Order_Script_Automation/chromedriver", chrome_options=self.chrome_options, service_args=['--verbose', '--log-path=/tmp/chromedriver.log'])
     def ez_web_access(self):
         self.driver.get(self.url)
+        print('hello')
         self.driver.find_element_by_id('Email').send_keys(self.username)
         self.driver.find_element_by_id('Password').send_keys(self.password)
         self.driver.find_element_by_id('Password').send_keys(Keys.ENTER)
