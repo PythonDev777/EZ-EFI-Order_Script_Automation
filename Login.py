@@ -20,6 +20,8 @@ class Woocommerce:
         self.consumer_secret = CONSUMER_SECRET
         self.url = 'https://calpros.net'
         self.wcapi = self.get_api_info()
+        self.ez_order = []
+        self.order_ids = ''
         self.automation = EZ_Web_Automation()
 
     def get_api_info(self):
@@ -33,80 +35,44 @@ class Woocommerce:
 
     def get_complete_orders_data(self, params):
         complete_orders = self.wcapi.get('orders', params=params).json()
-        self.process_orders(complete_orders)
+        self.process_orders(complete_orders[:1])
         return complete_orders
 
     def process_orders(self, new_orders):
-        ezlynk_order = ''
-        efilive_order = ''
         for info in new_orders:
             meta = info['line_items'][0]['name']
             if meta == 'Ez-Lynk Order':
                 ez_order = info['line_items'][0]['meta_data']
-                ez_order_details = []
                 for ez_data in ez_order:
                     ez_info = ez_data['value']
-                    ez_order_details.append(ez_info)
-                    ezlynk_order = ez_order_details
-                self.fullfill_ezlynk_order(ezlynk_order)
+                    self.ez_order.append(ez_info)
+                    self.order_ids = info['id']
             elif meta == 'Ez-Lynk Wholesale':
                 ez_order = info['line_items'][0]['meta_data']
-                ez_order_details = []
                 for ez_data in ez_order:
                     ez_info = ez_data['value']
-                    ez_order_details.append(ez_info)
-                    ezlynk_order = ez_order_details
-                self.fullfill_ezlynk_wholesale_order(ezlynk_order)
-            elif meta == 'EFI Tune Order':
-                efi_order = info['line_items'][0]['meta_data']
-                efi_order_details = []
-                for efi_data in efi_order:
-                    efi_info = efi_data['value']
-                    efi_order_details.append(efi_info)
-                    efilive_order = efi_order_details
-                # self.efi_order_info(efilive_order)
-
-                #return ezlynk_order, efilive_order
-
-    def fullfill_ezlynk_order(self, ez_order_details):
-        vehicle_type = ez_order_details[2]
-        lynk_time = ez_order_details[3]
-        vin_number = ez_order_details[4]
-        self.automation.ez_web_access()
-        self.automation.ez_auto_lynk()
-        self.automation.ez_vehicle_fuel_type()
-        self.automation.lynk_type(lynk_time)
-        self.automation.enter_vin_number(vin_number)
-        self.automation.select_rating_for_profile(lynk_time)
+                    self.ez_order.append(ez_info)
+                    self.order_ids = info['id']
+        self.fullfill_ezlynk_wholesale_order(self.ez_order)
 
     def fullfill_ezlynk_wholesale_order(self, ez_order_details):
-        vehicle_type = ez_order_details[2]
-        lynk_time = ez_order_details[1]
-        vin_number = ez_order_details[2]
-        self.automation.ez_web_access()
-        self.automation.ez_auto_lynk()
-        self.automation.ez_vehicle_fuel_type()
-        self.automation.lynk_type(lynk_time)
-        self.automation.enter_vin_number(vin_number)
-        self.automation.select_rating_for_profile(lynk_time)
-#         self.automation.submit_order()
-#
-#     def  efi_order_info(self, efi_product_specs):
-#         efi_order_details = efi_product_specs
-#         year = efi_order_details[0]
-#         power_level = efi_order_details[1]
-#         body_type = efi_order_details[2]
-#         trans_type = efi_order_details[3]
-#         emissions = efi_order_details[4]
-#         trans_tune = efi_order_details[5]
-#         turbo = efi_order_details[6]
-#         injectors = efi_order_details[7]
-#         print(year,power_level,body_type,trans_type,emissions,trans_tune,turbo,injectors)
-#
-    def filter_orders(self, orders):
+        if len(ez_order_details) <= 0:
+            self.automation.driver.close()
+            print('No New Orders Have Been Placed')
+        else:
+            vehicle_type = ez_order_details[2]
+            lynk_time = ez_order_details[3]
+            vin_number = ez_order_details[4]
+            self.automation.ez_web_access()
+            self.automation.ez_auto_lynk()
+            self.automation.ez_vehicle_fuel_type()
+            self.automation.lynk_type(lynk_time)
+            self.automation.enter_vin_number(vin_number)
+            self.automation.select_rating_for_profile(lynk_time)
+
+    def filter_orders(self):
         try:
-            for order in orders:
-                data = self.change_status_of_order(order['id'], "completed")
+            self.change_status_of_order(self.order_ids, "completed")
         except:
             print('Sorry Your Order Could Not Be Processed')
             exit(0)
@@ -115,9 +81,9 @@ class Woocommerce:
         data = {
             "status": status
         }
-
+        print(f'Order number # {self.order_ids} has been processed and completed and order status has been changed to', data['status'])
         return self.wcapi.put(f"orders/{order_id}", data).json()
-#
+
 
 class EZ_Web_Automation:
     def __init__(self):
@@ -144,8 +110,9 @@ class EZ_Web_Automation:
 
     def ez_vehicle_fuel_type(self):
         button = self.driver.find_element_by_css_selector("body > div.modal.ng-scope.ng-isolate-scope.in > div > div > div > div.select-vehicle-type-state-container.ng-pristine.ng-valid > div.state-buttons-container > button.btn.brand-button.next-state")
+        time.sleep(2)
         button.click()
-        time.sleep(1)
+        time.sleep(4)
 
     def lynk_type(self, lynk_time):
         if lynk_time == 'Zero Lynk':
@@ -154,45 +121,55 @@ class EZ_Web_Automation:
         elif '4 Week' in lynk_time:
             try:
                 self.driver.find_element_by_css_selector('body > div.modal.ng-scope.ng-isolate-scope.in > div > div > div > div.choose-capabilities-state-container.ng-pristine.ng-valid > div.modal-body > div.lynk-capabilities-buttons-container > lynk-capabilities-buttons > div > ul:nth-child(3) > li.lynk-button > button').click()
-                time.sleep(1)
+                time.sleep(2)
             except:
                 print("Could not process order because you are currently out of tokens. Please refill tokens to be able to process order")
                 exit(0)
         elif 'lifetime' in lynk_time:
             try:
                 self.driver.find_element_by_css_selector('body > div.modal.ng-scope.ng-isolate-scope.in > div > div > div > div.choose-capabilities-state-container.ng-pristine.ng-valid > div.modal-body > div.lynk-capabilities-buttons-container > lynk-capabilities-buttons > div > ul:nth-child(4) > li.lynk-button > button').click()
-                time.sleep(1)
+                time.sleep(2)
+            except:
+                print("Could not process order because you are currently out of tokens. Please refill tokens to be able to process order")
+                exit(0)
+        elif 'Lifetime' in lynk_time:
+            try:
+                self.driver.find_element_by_css_selector('body > div.modal.ng-scope.ng-isolate-scope.in > div > div > div > div.choose-capabilities-state-container.ng-pristine.ng-valid > div.modal-body > div.lynk-capabilities-buttons-container > lynk-capabilities-buttons > div > ul:nth-child(4) > li.lynk-button > button').click()
+                time.sleep(2)
             except:
                 print("Could not process order because you are currently out of tokens. Please refill tokens to be able to process order")
                 exit(0)
 
     def enter_vin_number(self, vin_id_number):
         self.driver.find_element_by_xpath('/html/body/div[1]/div/div/div/div[3]/div[2]/div[2]/select').click()
-        time.sleep(1)
+        time.sleep(1.5)
         self.driver.find_element_by_xpath('/html/body/div[1]/div/div/div/div[3]/div[2]/div[2]/select/option[2]').click()
-        time.sleep(1)
+        time.sleep(1.5)
         self.driver.find_element_by_xpath('/html/body/div[1]/div/div/div/div[3]/div[2]/div[3]/div/div/div[1]/div[1]/input').send_keys(vin_id_number)
         agent_id_next = self.driver.find_element_by_css_selector('body > div.modal.ng-scope.ng-isolate-scope.in > div > div > div > div.choose-creation-item-state-container.ng-invalid.ng-invalid-required.ng-valid-server-validation-failed.ng-valid-agent-ids-symbols.ng-valid-agent-ids-length.ng-valid-mask.ng-valid-vin-length.ng-valid-vin-duplicated.ng-valid-vin-server-validation-failed.ng-valid-vin-symbols.ng-dirty.ng-valid-parse > div.state-buttons-container > button.btn.brand-button.next-state')
-        agent_id_next.click()
         time.sleep(1.5)
+        agent_id_next.click()
+        time.sleep(3)
 
     def select_rating_for_profile(self, profile_rating):
-        if 'Single' in profile_rating :
+        if 'Single' in profile_rating:
+            self.driver.find_element_by_css_selector('body > div.modal.ng-scope.ng-isolate-scope.in > div > div > div > div.modal-message.ecu-profile-edit-auto-sharing > div.modal-body > ecu-profile-edit-auto-sharing-component > div.ecu-profile-rate-tag-container > div:nth-child(1)').click()
+            self.driver.find_element_by_css_selector('body > div.modal.ng-scope.ng-isolate-scope.in > div > div > div > div.modal-message.ecu-profile-edit-auto-sharing > div.modal-body > ecu-profile-edit-auto-sharing-component > div.ecu-profile-rate-tag-container > div:nth-child(2)').click()
             self.driver.find_element_by_css_selector('body > div.modal.ng-scope.ng-isolate-scope.in > div > div > div > div.modal-message.ecu-profile-edit-auto-sharing > div.modal-body > ecu-profile-edit-auto-sharing-component > div.ecu-profile-rate-tag-container > div:nth-child(3)').click()
             self.driver.find_element_by_css_selector('body > div.modal.ng-scope.ng-isolate-scope.in > div > div > div > div.modal-message.ecu-profile-edit-auto-sharing > div.modal-body > div > button.btn.brand-button.next-state').click()
             self.driver.find_element_by_css_selector('body > div.modal.ng-scope.ng-isolate-scope.in > div > div > div > div.confirm-state-container.ng-pristine.ng-valid > div.state-buttons-container > button.btn.brand-button.ok-state').click()
-            time.sleep(10)
+            time.sleep(2)
             self.driver.close()
+
         elif 'SOTF' in profile_rating:
-            self.driver.find_element_by_css_selector('body > div.modal.ng-scope.ng-isolate-scope.in > div > div > div > div.modal-message.ecu-profile-edit-auto-sharing > div.modal-body > ecu-profile-edit-auto-sharing-component > div.ecu-profile-rate-tag-container > div.rate-tag.ng-scope.enabled').click()
+            self.driver.find_element_by_css_selector('body > div.modal.ng-scope.ng-isolate-scope.in > div > div > div > div.modal-message.ecu-profile-edit-auto-sharing > div.modal-body > ecu-profile-edit-auto-sharing-component > div.ecu-profile-rate-tag-container > div:nth-child(1)').click()
+            self.driver.find_element_by_css_selector('body > div.modal.ng-scope.ng-isolate-scope.in > div > div > div > div.modal-message.ecu-profile-edit-auto-sharing > div.modal-body > ecu-profile-edit-auto-sharing-component > div.ecu-profile-rate-tag-container > div:nth-child(2)').click()
+            self.driver.find_element_by_css_selector('body > div.modal.ng-scope.ng-isolate-scope.in > div > div > div > div.modal-message.ecu-profile-edit-auto-sharing > div.modal-body > ecu-profile-edit-auto-sharing-component > div.ecu-profile-rate-tag-container > div:nth-child(3)').click()
+            self.driver.find_element_by_css_selector('body > div.modal.ng-scope.ng-isolate-scope.in > div > div > div > div.modal-message.ecu-profile-edit-auto-sharing > div.modal-body > ecu-profile-edit-auto-sharing-component > div.ecu-profile-rate-tag-container > div:nth-child(4)').click()
             self.driver.find_element_by_css_selector('body > div.modal.ng-scope.ng-isolate-scope.in > div > div > div > div.modal-message.ecu-profile-edit-auto-sharing > div.modal-body > div > button.btn.brand-button.next-state').click()
             self.driver.find_element_by_css_selector('body > div.modal.ng-scope.ng-isolate-scope.in > div > div > div > div.confirm-state-container.ng-pristine.ng-valid > div.state-buttons-container > button.btn.brand-button.ok-state').click()
-            time.sleep(10)
+            time.sleep(2)
             self.driver.close()
-#
-#     # def submit_order(self):
-#     #     submit_lynk = self.driver.find_element_by_xpath('body > div.modal.ng-scope.ng-isolate-scope.in > div > div > div > div.confirm-state-container.ng-pristine.ng-valid > div.state-buttons-container > button.btn.brand-button.ok-state')
-#     #     submit_lynk.click()
 
 
 if __name__ == '__main__':
@@ -201,7 +178,11 @@ if __name__ == '__main__':
         "status": 'processing'
     }
     orders = data.get_complete_orders_data(params)
-    data.filter_orders(orders)
+    if len(orders) <= 0:
+        pass
+    else:
+        data.filter_orders()
+
 
 
 
