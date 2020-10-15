@@ -3,10 +3,10 @@ from selenium.webdriver.common.keys import Keys
 import time
 import json
 from woocommerce import API
-from selenium.webdriver.support.ui import Select
+import os
 
 
-with open('Login_Info.json', 'r') as f:
+with open(f"{os.path.dirname(os.path.abspath(__file__))}Login_Info.json", 'r') as f:
     key = json.load(f)
     USERNAME = key['username']
     PASSWORD = key['password']
@@ -96,7 +96,8 @@ class EZ_Web_Automation:
         self.tech_account = 'https://cloud.ezlynk.com/wp/customers?sortBy=name&sortDir=asc'
         self.vin_click = 'https://cloud.ezlynk.com/wp/autosharing/queue?sortBy=value&sortDir=asc&vin=true'
         self.driver = webdriver.Chrome("/home/ubuntu/ezlynkapi/EZ-EFI-Order_Script_Automation/chromedriver", chrome_options=self.chrome_options, service_args=['--verbose', '--log-path=/tmp/chromedriver.log'])
-    
+
+
     def ez_web_access(self):
         self.driver.get(self.url)
         self.driver.find_element_by_id('Email').send_keys(self.username)
