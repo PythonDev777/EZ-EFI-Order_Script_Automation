@@ -6,7 +6,7 @@ from woocommerce import API
 import os
 
 
-with open(f"{os.path.dirname(os.path.abspath(__file__))}Login_Info.json", 'r') as f:
+with open(f"{os.path.dirname(os.path.abspath(__file__))}/Login_Info.json", 'r') as f:
     key = json.load(f)
     USERNAME = key['username']
     PASSWORD = key['password']
